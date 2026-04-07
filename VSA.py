@@ -3,33 +3,32 @@ import numpy as np
 from copy import deepcopy
 import matplotlib.pyplot as plt
 from matplotlib.ticker import PercentFormatter
+import tkinter.filedialog as filedialog
 
 # %% User inputs
 
 # path to the file
-file: str = r"C:\Users\AC03LH\OneDrive - Aalborg Universitet\Databases\VSA\Measurements\VON - HC Collet-08Dec2025-1,9997g.xls"
+file: str = filedialog.askopenfilename()
 # file: str = 'VON - HFI1-test1-0,209g.xls'
 
 # Dry weight of the sample in grams
-dry_weight: float = 1.9997
+dry_weight: float = 3.700
 # dry_weight: float = 0.209
 
-# The VSA weighings differs a bit from the actual weight. Provide here a offset between the weights.
-# An short analysis show that a general offset was around -0.0044 grams
-vsa_offset: float = -0.0064  # TODO fix better corrigation
+# The VSA weighings differs a bit from the actual weight. Provide here an offset between the weights.
+vsa_offset = lambda x: (x / 1000) * 0.999 - 0.0018 # TODO fix better corrigation
 
 
-# %% Data treatement
+# %% Data treatment
 
 def read(file: str) -> pd.DataFrame:
     df = pd.read_excel(file)
     return df
 
 
-def init_data_treat(df: pd.DataFrame) -> pd.DataFrame:
-    df['Weight (mg)'] = df['Weight (mg)'] - vsa_offset * 1000  # convert the offset in grams to an offset in miligrams
-    df['% Moisture\nContent'] = (df[
-                                     'Weight (mg)'] / 1000 - dry_weight) / dry_weight * 100  # Calculate the moisture content (%) in the sample
+def init_data_treat(df: pd.DataFrame, dry_weight: float, vsa_offset: float) -> pd.DataFrame:
+    df['Weight (mg)'] = df['Weight (mg)'].apply(vsa_offset)  # convert the offset in grams to an offset in milligrams
+    df['% Moisture\nContent'] = (df['Weight (mg)'] - dry_weight) / dry_weight * 100  # Calculate the moisture content (%) in the sample
     return df
 
 
@@ -45,7 +44,7 @@ def DDI_handler(df: pd.DataFrame) -> list[pd.DataFrame]:
 
 def VSA_data_analyser(file: str, dry_weight: float, vsa_offset: float = 0) -> dict:
     data = read(file)
-    data = init_data_treat(data)
+    data = init_data_treat(data, dry_weight, vsa_offset)
     cycles = {}  # [stage][isotherm][data]
     print('Data contain these type of isotherms:')
     for stage in data['Stage'].unique():
@@ -104,7 +103,7 @@ def VSA_plot(cycles: list, **kwargs) -> None:
             print(f'Layout for stage {i} changed')
             design[i] = kwargs['layout'][i]
 
-    fig = plt.figure(dpi=500, figsize=(7, 4))
+    fig = plt.figure(dpi=200, figsize=(7, 4))
     gs = fig.add_gridspec(ncols=1, nrows=1,
                           left=0.1, right=0.84, top=0.9, bottom=0.13)
     ax = fig.add_subplot(gs[0])
@@ -135,7 +134,7 @@ if __name__ == '__main__':
     layout = {2: {'Adsorption': {'c': 'red', 'marker': '*', 'mec': 'black'},
                   'Desorption': {'c': 'tab:blue', 'marker': '*', 'mec': 'black'}}}
     exclude = (1,)
-    VSA_plot(cycles, exclude=exclude, layout=layout)
+    VSA_plot(cycles) #, exclude=exclude, layout=layout)
 
     ad = []
     de = []
