@@ -12,11 +12,11 @@ file: str = filedialog.askopenfilename()
 # file: str = 'VON - HFI1-test1-0,209g.xls'
 
 # Dry weight of the sample in grams
-dry_weight: float = 3.700
+dry_weight: float = 3.9061
 # dry_weight: float = 0.209
 
-# The VSA weighings differs a bit from the actual weight. Provide here an offset between the weights.
-vsa_offset = lambda x: (x / 1000) * 0.999 - 0.0018 # TODO fix better corrigation
+# The VSA weighing differs a bit from the actual weight. Provide here an offset between the weights.
+vsa_offset = lambda x: (x / 1000) * 0.999 - 0.0018
 
 
 # %% Data treatment
@@ -27,8 +27,8 @@ def read(file: str) -> pd.DataFrame:
 
 
 def init_data_treat(df: pd.DataFrame, dry_weight: float, vsa_offset: float) -> pd.DataFrame:
-    df['Weight (mg)'] = df['Weight (mg)'].apply(vsa_offset)  # convert the offset in grams to an offset in milligrams
-    df['% Moisture\nContent'] = (df['Weight (mg)'] - dry_weight) / dry_weight * 100  # Calculate the moisture content (%) in the sample
+    df['Weight (mg)'] = df['Weight (mg)'].apply(vsa_offset)  # offset the vsa weighing
+    df['Moisture\nContent'] = (df['Weight (mg)'] - dry_weight) / dry_weight  # Calculate the moisture content (%) in the sample
     return df
 
 
@@ -111,7 +111,7 @@ def VSA_plot(cycles: list, **kwargs) -> None:
         for i, isotherm in enumerate(cycles[stage]):
             data_temp = cycles[stage][isotherm]
             x = data_temp['Water\nActivity']
-            y = data_temp['% Moisture\nContent']
+            y = data_temp['Moisture\nContent']
             if i == 0:
                 ax.plot(x, y, label=f'Stage{stage}', **design[stage][isotherm])
             else:
@@ -120,7 +120,7 @@ def VSA_plot(cycles: list, **kwargs) -> None:
     ax.xaxis.set_major_formatter(PercentFormatter(1))
     ax.grid(color='black', alpha=0.3)
     fig.supxlabel('Water activity, [-]')
-    fig.supylabel('% Moisture content by mass', x=0.01)
+    fig.supylabel('Moisture content by mass', x=0.01)
     # fig.suptitle(file)
     fig.legend(loc='center left', bbox_to_anchor=(0.84, 0.5))
     plt.show()
@@ -133,26 +133,28 @@ if __name__ == '__main__':
     exclude = (1, (3, 'Adsorption'))
     layout = {2: {'Adsorption': {'c': 'red', 'marker': '*', 'mec': 'black'},
                   'Desorption': {'c': 'tab:blue', 'marker': '*', 'mec': 'black'}}}
-    exclude = (1,)
-    VSA_plot(cycles) #, exclude=exclude, layout=layout)
+    exclude = (1, 2, 3)
+    VSA_plot(cycles, exclude=exclude) #, exclude=exclude, layout=layout)
 
     ad = []
     de = []
     for c in cycles:
-        if c == 1:
+        if c in (1, 2, 3):
             continue
         for i in cycles[c]:
             if i == 'Adsorption':
-                ad.append(cycles[c][i][['Water\nActivity', '% Moisture\nContent']].groupby('Water\nActivity').first())
+                ad.append(cycles[c][i][['Water\nActivity', 'Moisture\nContent']].groupby('Water\nActivity').first())
             else:
-                de.append(cycles[c][i][['Water\nActivity', '% Moisture\nContent']].groupby('Water\nActivity').first())
+                de.append(cycles[c][i][['Water\nActivity', 'Moisture\nContent']].groupby('Water\nActivity').first())
+
 
 ad = pd.concat(ad, axis=1).sort_index()
 de = pd.concat(de, axis=1).sort_index()
 
 # Bins og labels
-bins = np.arange(0, 1.01, 0.01)
-labels = [f'{0.01 * i:.2f}-{0.01 * i + 0.01:.2f}' for i in range(len(bins) - 1)]
+step = 0.05
+bins = np.arange(0, 1.01, step)
+labels = [f'{step * i:.2f}-{step * i + step:.2f}' for i in range(len(bins) - 1)]
 
 # Kategorisering
 ad_labels = pd.Series(pd.cut(ad.mean(axis=1).index, bins=bins, labels=labels, include_lowest=True).__array__(),
@@ -167,4 +169,21 @@ de = pd.concat([de.mean(axis=1), de_labels], axis=1)
 de = de.groupby(1).mean()
 de.rename(columns={0: 'de'}, inplace=True)
 
-final = pd.concat([ad, de], axis=1)
+final = pd.concat([ad, de], axis=1).sort_index()
+print(final.index)
+final.index = final.index.str.split('-').str[0].astype(float)
+final.index.name = 'RH'
+
+print(final)
+
+fig = plt.figure()
+ax = fig.add_subplot()
+ax.plot(final.index, final['ab']*1000, c='k', marker='*')
+ax.plot(final.index, final['de']*1000, c='k', marker='*')
+
+ax.set_xlabel('Relative humidity [-]')
+ax.set_ylabel('Moisture content [g/kg]')
+
+plt.show()
+
+final.to_excel(r'C:\Users\AC03LH\OneDrive - Aalborg Universitet\Skrivebord\Kalkstabil_DDI.xlsx')
