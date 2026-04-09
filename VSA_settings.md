@@ -15,12 +15,12 @@ The DDI method continuously measure the moisture content at a given water activi
 
 ### Recommended general settings
 
-| Setting            | Value |
-|--------------------|-------|
-| Start (aw)         | 0.05  |
-| Final (aw)         | 0.95  |
-| Temperature ($^o$C) | 23    |
-| Resolution (aw)    | 0.01  |
-| Flow (ml/min)      | 100.0 |
-| Timeout            | Off   |
-| Loop               | On    |
+| Setting                  | Value |
+|--------------------------|-------|
+| Start (aw)               | 0.05  |
+| Final (aw)               | 0.95  |
+| Temperature ($\degree$C) | 23    |
+| Resolution (aw)          | 0.01  |
+| Flow (ml/min)            | 100.0 |
+| Timeout                  | Off   |
+| Loop                     | On    |
