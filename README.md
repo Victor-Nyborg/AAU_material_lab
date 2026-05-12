@@ -3,6 +3,8 @@
 
 Data treatment scripts used for the equipment in the lab.
 
+For samples which need to be dried before testing the ISO 12570 should be used. 
+
 ### Currently support equipment
 * Oxygen diffusion apparatus, ODA
 * Vapor sorption analyser, VSA
