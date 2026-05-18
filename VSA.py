@@ -12,11 +12,11 @@ file: str = filedialog.askopenfilename()
 # file: str = 'VON - HFI1-test1-0,209g.xls'
 
 # Dry weight of the sample in grams
-dry_weight: float = 3.9061
+dry_weight: float = 0.346
 # dry_weight: float = 0.209
 
 # The VSA weighing differs a bit from the actual weight. Provide here an offset between the weights.
-vsa_offset = lambda x: (x / 1000) * 0.999 - 0.0018
+vsa_offset = lambda x: (x / 1000) * 0.9998 - 0.0244
 
 
 # %% Data treatment
@@ -28,6 +28,7 @@ def read(file: str) -> pd.DataFrame:
 
 def init_data_treat(df: pd.DataFrame, dry_weight: float, vsa_offset: float) -> pd.DataFrame:
     df['Weight (mg)'] = df['Weight (mg)'].apply(vsa_offset)  # offset the vsa weighing
+    print(df['Weight (mg)'].min())
     df['Moisture\nContent'] = (df['Weight (mg)'] - dry_weight) / dry_weight  # Calculate the moisture content (%) in the sample
     return df
 
@@ -130,16 +131,16 @@ def VSA_plot(cycles: list, **kwargs) -> None:
 if __name__ == '__main__':
     cycles = VSA_data_analyser(file, dry_weight, vsa_offset)
 
-    exclude = (1, (3, 'Adsorption'))
-    layout = {2: {'Adsorption': {'c': 'red', 'marker': '*', 'mec': 'black'},
-                  'Desorption': {'c': 'tab:blue', 'marker': '*', 'mec': 'black'}}}
-    exclude = (1, 2, 3)
+    exclude = (1, 2)
+    # layout = {2: {'Adsorption': {'c': 'red', 'marker': '*', 'mec': 'black'},
+    #               'Desorption': {'c': 'tab:blue', 'marker': '*', 'mec': 'black'}}}
+    exclude = (1,)
     VSA_plot(cycles, exclude=exclude) #, exclude=exclude, layout=layout)
 
     ad = []
     de = []
     for c in cycles:
-        if c in (1, 2, 3):
+        if c in (1,2):
             continue
         for i in cycles[c]:
             if i == 'Adsorption':
@@ -148,42 +149,44 @@ if __name__ == '__main__':
                 de.append(cycles[c][i][['Water\nActivity', 'Moisture\nContent']].groupby('Water\nActivity').first())
 
 
-ad = pd.concat(ad, axis=1).sort_index()
-de = pd.concat(de, axis=1).sort_index()
+    ad = pd.concat(ad, axis=1).sort_index()
+    de = pd.concat(de, axis=1).sort_index()
 
-# Bins og labels
-step = 0.05
-bins = np.arange(0, 1.01, step)
-labels = [f'{step * i:.2f}-{step * i + step:.2f}' for i in range(len(bins) - 1)]
+    # Bins og labels
+    step = 0.1
+    bins = np.arange(0, 1.01, step)
+    labels = [f'{step * i:.2f}-{step * i + step:.2f}' for i in range(len(bins) - 1)]
 
-# Kategorisering
-ad_labels = pd.Series(pd.cut(ad.mean(axis=1).index, bins=bins, labels=labels, include_lowest=True).__array__(),
-                      index=ad.index)
-ad = pd.concat([ad.mean(axis=1), ad_labels], axis=1)
-ad = ad.groupby(1).mean()
-ad.rename(columns={0: 'ab'}, inplace=True)
+    # Kategorisering
+    ad_labels = pd.Series(pd.cut(ad.mean(axis=1).index, bins=bins, labels=labels, include_lowest=True).__array__(),
+                          index=ad.index)
+    ad = pd.concat([ad.mean(axis=1), ad_labels], axis=1)
+    ad = ad.groupby(1).mean()
+    ad.rename(columns={0: 'ab'}, inplace=True)
 
-de_labels = pd.Series(pd.cut(de.mean(axis=1).index, bins=bins, labels=labels, include_lowest=True).__array__(),
-                      index=de.index)
-de = pd.concat([de.mean(axis=1), de_labels], axis=1)
-de = de.groupby(1).mean()
-de.rename(columns={0: 'de'}, inplace=True)
+    de_labels = pd.Series(pd.cut(de.mean(axis=1).index, bins=bins, labels=labels, include_lowest=True).__array__(),
+                          index=de.index)
+    de = pd.concat([de.mean(axis=1), de_labels], axis=1)
+    de = de.groupby(1).mean()
+    de.rename(columns={0: 'de'}, inplace=True)
 
-final = pd.concat([ad, de], axis=1).sort_index()
-print(final.index)
-final.index = final.index.str.split('-').str[0].astype(float)
-final.index.name = 'RH'
+    final = pd.concat([ad, de], axis=1).sort_index()
+    print(final.index)
+    final.index = final.index.str.split('-').str[0].astype(float)
+    final.index.name = 'RH'
 
-print(final)
+    print(final)
 
-fig = plt.figure()
-ax = fig.add_subplot()
-ax.plot(final.index, final['ab']*1000, c='k', marker='*')
-ax.plot(final.index, final['de']*1000, c='k', marker='*')
+    fig = plt.figure()
+    ax = fig.add_subplot()
+    ax.plot(final.index, final['ab']*1000, c='k', marker='*')
+    ax.plot(final.index, final['de']*1000, c='k', marker='*')
 
-ax.set_xlabel('Relative humidity [-]')
-ax.set_ylabel('Moisture content [g/kg]')
+    ax.set_xlabel('Relative humidity [-]')
+    ax.set_ylabel('Moisture content [g/kg]')
 
-plt.show()
+    fig.suptitle('Woodfiber insulation')
+    fig.savefig(r'C:\Users\AC03LH\OneDrive - Aalborg Universitet\Skrivebord\Woodfiber_isolering.png')
+    plt.show()
 
-final.to_excel(r'C:\Users\AC03LH\OneDrive - Aalborg Universitet\Skrivebord\Kalkstabil_DDI.xlsx')
+final.to_excel(r'C:\Users\AC03LH\OneDrive - Aalborg Universitet\Skrivebord\Woodfiber_isolering.xlsx')

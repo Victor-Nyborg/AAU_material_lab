@@ -6,6 +6,8 @@ This document is to standardize the procedure for performing isotherm sorption m
 It tells the reader which settings to use for performing either the DVS or DDI method. In the future there might be suggested setting depending on type of material. 
 
 For both methods the initial moisture content should be set to *Dry Basis* and *0.0%*, the true moisture content will be calculated in the data treatment script, [VSA.py](VSA.py).
+The mass of the sample should preferably be above 1 gram if possible to reduce the affect from scale-noice. Light materials such as fibrous isolation materials benefits of being cutted into small pieces.
+
 ## DVS
 The DVS method, measure the moisture content for a given ambient water activity when equilibrium has been achieved. It more or less follows the ISO 12571 standard.
 
